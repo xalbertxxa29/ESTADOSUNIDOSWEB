@@ -33,7 +33,28 @@ const authModule = (() => {
             logoutBtn.addEventListener('click', handleLogout);
             console.log('✅ Listener de logout agregado');
         }
+        
+        // Inicializar selector de idioma en login
+        setupLanguageSelectorLogin();
+        
         checkAuthState();
+    };
+
+    const setupLanguageSelectorLogin = () => {
+        console.log('🌐 Configurando selector de idioma en login');
+        const languageSelectorLogin = document.getElementById('languageSelectorLogin');
+        
+        if (languageSelectorLogin) {
+            // Set current language
+            languageSelectorLogin.value = i18n.getCurrentLanguage();
+            
+            // Add change event listener
+            languageSelectorLogin.addEventListener('change', (e) => {
+                console.log('🔄 Cambiando idioma en login a:', e.target.value);
+                i18n.setLanguage(e.target.value);
+                console.log('✅ Idioma cambiado en login');
+            });
+        }
     };
 
     const handleLogin = async (e) => {
@@ -47,7 +68,7 @@ const authModule = (() => {
 
         if (!window.auth) {
             console.error('❌ Firebase Auth no está disponible');
-            loginError.textContent = 'Firebase no está inicializado';
+            loginError.textContent = i18n.t('firebase_not_initialized');
             return;
         }
 
@@ -118,14 +139,15 @@ const authModule = (() => {
     };
 
     const getErrorMessage = (code) => {
-        const messages = {
-            'auth/user-not-found': 'El usuario no existe',
-            'auth/wrong-password': 'Contraseña incorrecta',
-            'auth/invalid-email': 'Correo electrónico inválido',
-            'auth/too-many-requests': 'Demasiados intentos fallidos. Intenta más tarde',
-            'auth/user-disabled': 'Usuario deshabilitado'
+        const errorMap = {
+            'auth/user-not-found': 'error_user_not_found',
+            'auth/wrong-password': 'error_wrong_password',
+            'auth/invalid-email': 'error_invalid_email',
+            'auth/too-many-requests': 'error_too_many_requests',
+            'auth/user-disabled': 'error_user_disabled'
         };
-        return messages[code] || 'Error al iniciar sesión';
+        const key = errorMap[code] || 'error_login_failed';
+        return i18n.t(key);
     };
 
     return {

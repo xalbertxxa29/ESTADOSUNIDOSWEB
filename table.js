@@ -262,48 +262,392 @@ const tableModule = (() => {
     };
 
     const exportToExcel = () => {
-        const tableData = [];
-        tableData.push(['Fecha', 'Nombre', 'Punto de Marcación', 'Observación']);
+        try {
+            console.log('📊 Iniciando exportación a Excel...');
+            
+            // Verificar que XLSX está disponible
+            if (typeof XLSX === 'undefined') {
+                console.error('❌ XLSX no está disponible globalmente');
+                alert('Error: Librería XLSX no está cargada. Por favor recarga la página.');
+                return;
+            }
+            
+            // Verificar que hay datos
+            if (!filteredData || filteredData.length === 0) {
+                alert('No hay datos para exportar');
+                return;
+            }
+            
+            console.log('✅ Preparando datos para Excel...');
+            
+            // Preparar headers
+            const headers = ['Fecha', 'Nombre', 'Punto de Marcación', 'Observación'];
+            
+            // Preparar datos
+            const tableData = [headers];
+            filteredData.forEach(item => {
+                tableData.push([
+                    formatDate(item.createdAt),
+                    item.nombreAgente || '-',
+                    item.punto || '-',
+                    item.observacion || '-'
+                ]);
+            });
 
-        filteredData.forEach(item => {
-            tableData.push([
-                formatDate(item.createdAt),
-                item.nombreAgente || '-',
-                item.punto || '-',
-                item.observacion || '-'
-            ]);
-        });
+            console.log('✅ Creando workbook...');
+            
+            // Crear worksheet
+            const ws = XLSX.utils.aoa_to_sheet(tableData);
+            
+            // Configurar ancho de columnas
+            ws['!cols'] = [
+                { wch: 15 },
+                { wch: 20 },
+                { wch: 25 },
+                { wch: 30 }
+            ];
 
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(tableData);
-        ws['!cols'] = [
-            { wch: 15 },
-            { wch: 20 },
-            { wch: 20 },
-            { wch: 30 }
-        ];
-        XLSX.utils.book_append_sheet(wb, ws, 'Incidencias');
-        XLSX.writeFile(wb, `Incidencias_${new Date().toISOString().split('T')[0]}.xlsx`);
+            // Crear workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Incidencias');
+            
+            // Generar nombre de archivo
+            const fileName = `Incidencias_${new Date().toISOString().split('T')[0]}.xlsx`;
+            
+            console.log('✅ Guardando archivo...');
+            
+            // Descargar archivo
+            XLSX.writeFile(wb, fileName);
+            console.log('✅ Exportación a Excel completada:', fileName);
+            alert('✅ Excel exportado exitosamente como: ' + fileName);
+        } catch (error) {
+            console.error('❌ Error en exportación a Excel:', error);
+            alert('Error al exportar a Excel: ' + error.message);
+        }
     };
 
     const exportToPdf = () => {
-        const element = document.getElementById('dataTable');
-        const opt = {
-            margin: 10,
-            filename: `Incidencias_${new Date().toISOString().split('T')[0]}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
-        };
-
-        // Create table copy for PDF
-        const clonedTable = element.cloneNode(true);
-        const photoHeaders = clonedTable.querySelectorAll('th:last-child');
-        photoHeaders.forEach(header => header.remove());
-        const photoCells = clonedTable.querySelectorAll('td:last-child');
-        photoCells.forEach(cell => cell.remove());
-
-        html2pdf().set(opt).from(clonedTable).save();
+        try {
+            console.log('📄 Iniciando exportación a PDF...');
+            
+            // Verificar que html2pdf está disponible
+            if (typeof html2pdf === 'undefined') {
+                console.error('❌ html2pdf no está cargado');
+                alert('Error: Librería html2pdf no está cargada. Por favor recarga la página.');
+                return;
+            }
+            
+            // Verificar que hay datos
+            if (!filteredData || filteredData.length === 0) {
+                alert('No hay datos para exportar');
+                return;
+            }
+            
+            console.log('✅ Preparando contenido para PDF...');
+            
+            // Crear contenedor principal
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.width = '100%';
+            pdfContainer.style.backgroundColor = '#ffffff';
+            pdfContainer.style.padding = '20px';
+            pdfContainer.style.fontFamily = 'Arial, sans-serif';
+            
+            // ===== HEADER CON LOGO Y TÍTULO =====
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            header.style.borderBottom = '4px solid #8B2323';
+            header.style.paddingBottom = '15px';
+            header.style.marginBottom = '20px';
+            
+            // Logo y título
+            const logoSection = document.createElement('div');
+            logoSection.style.display = 'flex';
+            logoSection.style.alignItems = 'center';
+            logoSection.style.gap = '15px';
+            
+            const logo = document.createElement('img');
+            logo.src = 'logo.png';
+            logo.style.width = '70px';
+            logo.style.height = '70px';
+            logo.style.objectFit = 'contain';
+            
+            const titleSection = document.createElement('div');
+            titleSection.innerHTML = `
+                <h1 style="margin: 0; color: #8B2323; font-size: 28px; font-weight: bold;">
+                    Sistema de Reportes Liderman
+                </h1>
+                <p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">
+                    Reporte de Incidencias y Puntos de Marcación
+                </p>
+            `;
+            
+            logoSection.appendChild(logo);
+            logoSection.appendChild(titleSection);
+            
+            // Información de fecha y hora
+            const dateSection = document.createElement('div');
+            dateSection.style.textAlign = 'right';
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('es-PE', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            const timeStr = now.toLocaleTimeString('es-PE');
+            
+            dateSection.innerHTML = `
+                <p style="margin: 0; color: #333; font-weight: bold; font-size: 12px;">
+                    Generado: ${dateStr}
+                </p>
+                <p style="margin: 5px 0 0 0; color: #666; font-size: 11px;">
+                    ${timeStr}
+                </p>
+            `;
+            
+            header.appendChild(logoSection);
+            header.appendChild(dateSection);
+            pdfContainer.appendChild(header);
+            
+            // ===== TABLA DE DATOS =====
+            const tableSection = document.createElement('div');
+            tableSection.style.marginBottom = '30px';
+            
+            const tableTitle = document.createElement('h2');
+            tableTitle.textContent = 'Detalle de Incidencias';
+            tableTitle.style.color = '#8B2323';
+            tableTitle.style.fontSize = '16px';
+            tableTitle.style.marginBottom = '10px';
+            tableSection.appendChild(tableTitle);
+            
+            // Clonar tabla original y aplicar estilos
+            const originalTable = document.getElementById('dataTable');
+            if (originalTable) {
+                const clonedTable = originalTable.cloneNode(true);
+                
+                // Estilos para tabla
+                clonedTable.style.width = '100%';
+                clonedTable.style.borderCollapse = 'collapse';
+                clonedTable.style.fontSize = '10px';
+                
+                // Estilos para headers
+                const headers = clonedTable.querySelectorAll('thead th');
+                headers.forEach(header => {
+                    header.style.backgroundColor = '#8B2323';
+                    header.style.color = '#ffffff';
+                    header.style.padding = '12px';
+                    header.style.textAlign = 'left';
+                    header.style.fontWeight = 'bold';
+                    header.style.border = '2px solid #8B2323';
+                    header.style.fontSize = '11px';
+                });
+                
+                // Remover últimas celdas (foto) de headers
+                const lastHeader = headers[headers.length - 1];
+                if (lastHeader && lastHeader.textContent.includes('Foto')) {
+                    lastHeader.remove();
+                }
+                
+                // Estilos para celdas
+                const cells = clonedTable.querySelectorAll('tbody td');
+                let rowCount = 0;
+                cells.forEach((cell, index) => {
+                    cell.style.padding = '10px 12px';
+                    cell.style.border = '1px solid #ddd';
+                    cell.style.fontSize = '10px';
+                    
+                    // Remover imágenes
+                    const images = cell.querySelectorAll('img');
+                    images.forEach(img => img.remove());
+                    
+                    // Remover última celda en cada fila (foto)
+                    if ((index + 1) % 5 === 0) {
+                        cell.remove();
+                        rowCount++;
+                    }
+                });
+                
+                // Colores alternados en filas
+                const rows = clonedTable.querySelectorAll('tbody tr');
+                rows.forEach((row, idx) => {
+                    if (idx % 2 === 0) {
+                        row.style.backgroundColor = '#f8f8f8';
+                    } else {
+                        row.style.backgroundColor = '#ffffff';
+                    }
+                    
+                    // Hover effect simulado
+                    row.style.borderLeft = '4px solid transparent';
+                });
+                
+                tableSection.appendChild(clonedTable);
+            }
+            
+            pdfContainer.appendChild(tableSection);
+            
+            // ===== GRÁFICO DE TORTA (Puntos de Marcación) =====
+            const chartSection = document.createElement('div');
+            chartSection.style.marginTop = '30px';
+            chartSection.style.paddingTop = '20px';
+            chartSection.style.borderTop = '2px solid #ddd';
+            
+            const chartTitle = document.createElement('h2');
+            chartTitle.textContent = 'Distribución de Puntos de Marcación';
+            chartTitle.style.color = '#8B2323';
+            chartTitle.style.fontSize = '16px';
+            chartTitle.style.marginBottom = '15px';
+            chartSection.appendChild(chartTitle);
+            
+            // Calcular distribución de puntos
+            const puntosMap = {};
+            filteredData.forEach(item => {
+                const punto = item.punto || 'Sin especificar';
+                puntosMap[punto] = (puntosMap[punto] || 0) + 1;
+            });
+            
+            const puntosLabels = Object.keys(puntosMap);
+            const puntosData = Object.values(puntosMap);
+            
+            // Crear canvas para gráfico
+            const chartCanvas = document.createElement('canvas');
+            chartCanvas.id = 'pdfChart';
+            chartCanvas.width = 400;
+            chartCanvas.height = 300;
+            chartCanvas.style.maxWidth = '100%';
+            chartCanvas.style.margin = '0 auto';
+            chartCanvas.style.display = 'block';
+            
+            chartSection.appendChild(chartCanvas);
+            pdfContainer.appendChild(chartSection);
+            
+            // ===== RESUMEN ESTADÍSTICO =====
+            const statsSection = document.createElement('div');
+            statsSection.style.marginTop = '30px';
+            statsSection.style.display = 'grid';
+            statsSection.style.gridTemplateColumns = '1fr 1fr 1fr';
+            statsSection.style.gap = '15px';
+            
+            const stats = [
+                { label: 'Total de Registros', value: filteredData.length, icon: '📊' },
+                { label: 'Puntos de Marcación', value: puntosLabels.length, icon: '📍' },
+                { label: 'Fecha Generación', value: new Date().toLocaleDateString('es-PE'), icon: '📅' }
+            ];
+            
+            stats.forEach(stat => {
+                const statBox = document.createElement('div');
+                statBox.style.backgroundColor = '#f0f0f0';
+                statBox.style.padding = '15px';
+                statBox.style.borderRadius = '8px';
+                statBox.style.textAlign = 'center';
+                statBox.style.borderLeft = '4px solid #8B2323';
+                
+                statBox.innerHTML = `
+                    <p style="margin: 0; font-size: 12px; color: #666;">${stat.icon} ${stat.label}</p>
+                    <p style="margin: 8px 0 0 0; font-size: 24px; font-weight: bold; color: #8B2323;">${stat.value}</p>
+                `;
+                
+                statsSection.appendChild(statBox);
+            });
+            
+            pdfContainer.appendChild(statsSection);
+            
+            // ===== FOOTER =====
+            const footer = document.createElement('div');
+            footer.style.marginTop = '30px';
+            footer.style.paddingTop = '15px';
+            footer.style.borderTop = '2px solid #ddd';
+            footer.style.fontSize = '10px';
+            footer.style.color = '#999';
+            footer.style.textAlign = 'center';
+            
+            footer.innerHTML = `
+                <p style="margin: 0;">
+                    📋 Documento generado automáticamente por Sistema de Reportes Liderman
+                </p>
+                <p style="margin: 5px 0 0 0;">
+                    🔒 Información confidencial - Uso interno
+                </p>
+            `;
+            
+            pdfContainer.appendChild(footer);
+            
+            // Agregar al DOM temporalmente
+            const tempContainer = document.createElement('div');
+            tempContainer.style.display = 'none';
+            tempContainer.appendChild(pdfContainer);
+            document.body.appendChild(tempContainer);
+            
+            // Crear gráfico
+            const ctx = chartCanvas.getContext('2d');
+            const chartColors = ['#8B2323', '#D4504B', '#E89189', '#C8544B', '#A63F38', '#6B1812'];
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: puntosLabels,
+                    datasets: [{
+                        data: puntosData,
+                        backgroundColor: chartColors.slice(0, puntosLabels.length),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 10 },
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed + ' registros';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Esperar un momento para que el gráfico se renderice
+            setTimeout(() => {
+                console.log('✅ Generando PDF...');
+                
+                const opt = {
+                    margin: [10, 10, 10, 10],
+                    filename: `Incidencias_${new Date().toISOString().split('T')[0]}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+                    jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' },
+                    pagebreak: { mode: 'avoid-all' }
+                };
+                
+                html2pdf()
+                    .set(opt)
+                    .from(pdfContainer)
+                    .save()
+                    .then(() => {
+                        console.log('✅ PDF generado exitosamente');
+                        document.body.removeChild(tempContainer);
+                        alert('✅ PDF exportado exitosamente');
+                    })
+                    .catch((error) => {
+                        console.error('❌ Error generando PDF:', error);
+                        document.body.removeChild(tempContainer);
+                        alert('Error al generar PDF: ' + error.message);
+                    });
+            }, 500);
+            
+        } catch (error) {
+            console.error('❌ Error en exportación a PDF:', error);
+            alert('Error al exportar a PDF: ' + error.message);
+        }
     };
 
     const setupImageModal = () => {

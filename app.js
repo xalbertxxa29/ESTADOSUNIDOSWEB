@@ -6,6 +6,7 @@ const appModule = (() => {
         console.log('🎯 Inicializando App');
         setupPageNavigation();
         setupSidebar();
+        setupLanguageSelector();
         console.log('✅ App inicializado');
     };
 
@@ -57,10 +58,14 @@ const appModule = (() => {
 
     const updatePageTitle = (page) => {
         const titles = {
-            'dashboard': 'Dashboard',
-            'table': 'Tabla de Datos'
+            'dashboard': 'dashboard_title',
+            'table': 'table_title'
         };
-        document.getElementById('pageTitle').textContent = titles[page] || 'Página';
+        const pageTitle = document.getElementById('pageTitle');
+        if (pageTitle) {
+            const titleKey = titles[page] || 'Página';
+            pageTitle.textContent = i18n.t(titleKey);
+        }
     };
 
     const setupSidebar = () => {
@@ -97,6 +102,50 @@ const appModule = (() => {
     const closeSidebar = () => {
         if (window.innerWidth <= 768) {
             document.querySelector('.sidebar').classList.remove('active');
+        }
+    };
+
+    const setupLanguageSelector = () => {
+        console.log('🌐 Configurando selector de idioma');
+        
+        // Selector del login (si existe)
+        const languageSelectorLogin = document.getElementById('languageSelectorLogin');
+        
+        // Selector del header (si existe)
+        const languageSelector = document.getElementById('languageSelector');
+        
+        // Función para sincronizar ambos selectores
+        const syncSelectors = (lang) => {
+            if (languageSelectorLogin) {
+                languageSelectorLogin.value = lang;
+            }
+            if (languageSelector) {
+                languageSelector.value = lang;
+            }
+        };
+        
+        // Set current language on page load
+        const currentLang = i18n.getCurrentLanguage();
+        syncSelectors(currentLang);
+        
+        // Add change event listener al selector del login
+        if (languageSelectorLogin) {
+            languageSelectorLogin.addEventListener('change', (e) => {
+                console.log('🔄 Cambiando idioma a:', e.target.value);
+                i18n.setLanguage(e.target.value);
+                syncSelectors(e.target.value);
+                console.log('✅ Idioma cambiado');
+            });
+        }
+        
+        // Add change event listener al selector del header
+        if (languageSelector) {
+            languageSelector.addEventListener('change', (e) => {
+                console.log('🔄 Cambiando idioma a:', e.target.value);
+                i18n.setLanguage(e.target.value);
+                syncSelectors(e.target.value);
+                console.log('✅ Idioma cambiado');
+            });
         }
     };
 
