@@ -17,12 +17,23 @@
     <!-- Chart.js Data Labels Plugin -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
     
-    <!-- XLSX for Excel export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <!-- XLSX for Excel export - VERSIÓN COMPLETA Y FUNCIONAL -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
-    <!-- Garantizar XLSX disponible globalmente -->
+    <!-- Garantizar XLSX disponible globalmente con espera -->
     <script>
-        window.XLSX = XLSX;  // 🔧 Esto hace que la librería sea GLOBAL siempre
+        let xlsxReady = false;
+        const waitForXLSX = () => {
+            if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.writeFile) {
+                window.XLSX = XLSX;
+                xlsxReady = true;
+                console.log('✅ XLSX cargado completamente y disponible globalmente');
+                console.log('✅ XLSX.utils:', XLSX.utils);
+            } else {
+                setTimeout(waitForXLSX, 100);
+            }
+        };
+        waitForXLSX();
     </script>
     
     <!-- HTML2PDF for PDF export -->

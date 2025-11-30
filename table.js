@@ -266,9 +266,18 @@ const tableModule = (() => {
             console.log('📊 Iniciando exportación a Excel...');
             
             // Verificar que XLSX está disponible
-            if (typeof XLSX === 'undefined') {
-                console.error('❌ XLSX no está disponible globalmente');
-                alert('Error: Librería XLSX no está cargada. Por favor recarga la página.');
+            if (typeof XLSX === 'undefined' || !window.XLSX) {
+                console.error('❌ XLSX no está disponible');
+                console.log('Esperando 2 segundos e intentando de nuevo...');
+                
+                // Reintentar después de 2 segundos
+                setTimeout(() => {
+                    if (typeof XLSX === 'undefined' || !window.XLSX) {
+                        alert('Error: Librería XLSX no se pudo cargar. Por favor recarga la página.');
+                        return;
+                    }
+                    exportToExcel(); // Reintentar
+                }, 2000);
                 return;
             }
             
@@ -280,36 +289,170 @@ const tableModule = (() => {
             
             console.log('✅ Preparando datos para Excel...');
             
-            // Preparar headers
-            const headers = ['Fecha', 'Nombre', 'Punto de Marcación', 'Observación'];
+            // Crear workbook
+            const wb = XLSX.utils.book_new();
             
-            // Preparar datos
+            // ===== HOJA 1: PORTADA CON INFO =====
+            const coverData = [
+                ['SISTEMA DE REPORTES LIDERMAN'],
+                [''],
+                ['REPORTE DE INCIDENCIAS'],
+                [''],
+                ['Fecha de Generación:', new Date().toLocaleDateString('es-PE')],
+                ['Hora:', new Date().toLocaleTimeString('es-PE')],
+                ['Total de Registros:', filteredData.length],
+                [''],
+                ['Documento confidencial - Uso interno']
+            ];
+            
+            const wsCover = XLSX.utils.aoa_to_sheet(coverData);
+            wsCover['!cols'] = [{ wch: 40 }, { wch: 30 }];
+            
+            // Estilos a la portada (XLSX básico no soporta estilos complejos, pero podemos hacer algunas cosas)
+            for (let i = 0; i < coverData.length; i++) {
+                const cellRef = `A${i + 1}`;
+                if (wsCover[cellRef]) {
+                    wsCover[cellRef].s = {
+                        font: { bold: i === 0 || i === 2, sz: i === 0 ? 16 : 11 },
+                        fill: { fgColor: { rgb: i === 0 ? 'FF8B2323' : 'FFFFFFFF' } },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+            }
+            
+            XLSX.utils.book_append_sheet(wb, wsCover, 'Portada');
+            
+            // ===== HOJA 2: DATOS DETALLADOS =====
+            const headers = ['Fecha', 'Nombre del Agente', 'Punto de Marcación', 'Observación', 'Estado'];
+            
             const tableData = [headers];
+            let totalPuntos = new Set();
+            
             filteredData.forEach(item => {
+                totalPuntos.add(item.punto);
                 tableData.push([
                     formatDate(item.createdAt),
                     item.nombreAgente || '-',
                     item.punto || '-',
-                    item.observacion || '-'
+                    item.observacion || '-',
+                    item.critico ? 'Crítico' : 'Normal'
                 ]);
             });
-
-            console.log('✅ Creando workbook...');
             
-            // Crear worksheet
-            const ws = XLSX.utils.aoa_to_sheet(tableData);
+            const wsData = XLSX.utils.aoa_to_sheet(tableData);
             
             // Configurar ancho de columnas
-            ws['!cols'] = [
-                { wch: 15 },
-                { wch: 20 },
-                { wch: 25 },
-                { wch: 30 }
+            wsData['!cols'] = [
+                { wch: 15 },  // Fecha
+                { wch: 20 },  // Nombre
+                { wch: 20 },  // Punto
+                { wch: 35 },  // Observación
+                { wch: 12 }   // Estado
             ];
-
-            // Crear workbook
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Incidencias');
+            
+            // Aplicar estilos a headers
+            const headerStyle = {
+                font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 11 },
+                fill: { fgColor: { rgb: 'FF8B2323' } },
+                alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+            };
+            
+            headers.forEach((header, idx) => {
+                const cellRef = XLSX.utils.encode_cell({ r: 0, c: idx });
+                if (!wsData[cellRef]) wsData[cellRef] = {};
+                wsData[cellRef].s = headerStyle;
+            });
+            
+            // Aplicar estilos a datos
+            for (let row = 1; row < tableData.length; row++) {
+                for (let col = 0; col < headers.length; col++) {
+                    const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+                    if (wsData[cellRef]) {
+                        wsData[cellRef].s = {
+                            alignment: { horizontal: 'left', vertical: 'top', wrapText: true },
+                            fill: { fgColor: { rgb: row % 2 === 0 ? 'FFF8F8F8' : 'FFFFFFFF' } },
+                            border: {
+                                top: { style: 'thin', color: { rgb: 'FFD3D3D3' } },
+                                bottom: { style: 'thin', color: { rgb: 'FFD3D3D3' } },
+                                left: { style: 'thin', color: { rgb: 'FFD3D3D3' } },
+                                right: { style: 'thin', color: { rgb: 'FFD3D3D3' } }
+                            }
+                        };
+                    }
+                }
+            }
+            
+            // Freeze primera fila
+            wsData['!freeze'] = { xSplit: 0, ySplit: 1 };
+            
+            XLSX.utils.book_append_sheet(wb, wsData, 'Datos');
+            
+            // ===== HOJA 3: ESTADÍSTICAS =====
+            const puntosArray = Array.from(totalPuntos).sort();
+            const puntosStats = {};
+            
+            filteredData.forEach(item => {
+                const punto = item.punto || 'Sin especificar';
+                puntosStats[punto] = (puntosStats[punto] || 0) + 1;
+            });
+            
+            const statsData = [
+                ['ESTADÍSTICAS Y RESUMEN'],
+                [''],
+                ['Métrica', 'Valor'],
+                ['Total de Registros', filteredData.length],
+                ['Puntos de Marcación Únicos', puntosArray.length],
+                [''],
+                ['DISTRIBUCIÓN POR PUNTO'],
+                ['Punto de Marcación', 'Cantidad', 'Porcentaje']
+            ];
+            
+            puntosArray.forEach(punto => {
+                const count = puntosStats[punto];
+                const percentage = ((count / filteredData.length) * 100).toFixed(2) + '%';
+                statsData.push([punto, count, percentage]);
+            });
+            
+            const wsStats = XLSX.utils.aoa_to_sheet(statsData);
+            wsStats['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }];
+            
+            // Estilos a estadísticas
+            for (let i = 0; i < statsData.length; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const cellRef = XLSX.utils.encode_cell({ r: i, c: j });
+                    if (wsStats[cellRef]) {
+                        if (i === 0 || i === 6) {
+                            // Títulos principales
+                            wsStats[cellRef].s = {
+                                font: { bold: true, sz: 12, color: { rgb: 'FFFFFFFF' } },
+                                fill: { fgColor: { rgb: 'FF8B2323' } },
+                                alignment: { horizontal: 'center' }
+                            };
+                        } else if (i === 2 || i === 7) {
+                            // Headers de tabla
+                            wsStats[cellRef].s = {
+                                font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 10 },
+                                fill: { fgColor: { rgb: 'FFC0504B' } },
+                                alignment: { horizontal: 'center' }
+                            };
+                        } else if (i > 8) {
+                            // Datos de puntos
+                            wsStats[cellRef].s = {
+                                fill: { fgColor: { rgb: i % 2 === 0 ? 'FFF8F8F8' : 'FFFFFFFF' } },
+                                border: {
+                                    top: { style: 'thin' },
+                                    bottom: { style: 'thin' },
+                                    left: { style: 'thin' },
+                                    right: { style: 'thin' }
+                                },
+                                alignment: { horizontal: 'center' }
+                            };
+                        }
+                    }
+                }
+            }
+            
+            XLSX.utils.book_append_sheet(wb, wsStats, 'Estadísticas');
             
             // Generar nombre de archivo
             const fileName = `Incidencias_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -319,14 +462,16 @@ const tableModule = (() => {
             // Descargar archivo
             XLSX.writeFile(wb, fileName);
             console.log('✅ Exportación a Excel completada:', fileName);
-            alert('✅ Excel exportado exitosamente como: ' + fileName);
+            alert('✅ Excel exportado exitosamente como: ' + fileName + '\n\n📊 Contiene 3 hojas:\n1. Portada\n2. Datos completos\n3. Estadísticas');
+            
         } catch (error) {
             console.error('❌ Error en exportación a Excel:', error);
+            console.error('Stack:', error.stack);
             alert('Error al exportar a Excel: ' + error.message);
         }
     };
 
-    const exportToPdf = () => {
+    const exportToPdf = async () => {
         try {
             console.log('📄 Iniciando exportación a PDF...');
             
@@ -347,10 +492,13 @@ const tableModule = (() => {
             
             // Crear contenedor principal
             const pdfContainer = document.createElement('div');
+            pdfContainer.id = 'facilityTableContent';
             pdfContainer.style.width = '100%';
             pdfContainer.style.backgroundColor = '#ffffff';
             pdfContainer.style.padding = '20px';
             pdfContainer.style.fontFamily = 'Arial, sans-serif';
+            // 🔧 PASO A: Hacer visible ANTES de capturar
+            pdfContainer.style.display = 'block';
             
             // ===== HEADER CON LOGO Y TÍTULO =====
             const header = document.createElement('div');
@@ -476,8 +624,6 @@ const tableModule = (() => {
                     } else {
                         row.style.backgroundColor = '#ffffff';
                     }
-                    
-                    // Hover effect simulado
                     row.style.borderLeft = '4px solid transparent';
                 });
                 
@@ -572,9 +718,14 @@ const tableModule = (() => {
             
             pdfContainer.appendChild(footer);
             
-            // Agregar al DOM temporalmente
+            // Agregar al DOM temporalmente - AHORA VISIBLE DESDE EL INICIO
             const tempContainer = document.createElement('div');
-            tempContainer.style.display = 'none';
+            // 🔧 PASO A: Hacer visible el contenedor DESDE EL INICIO
+            tempContainer.style.display = 'block';
+            tempContainer.style.position = 'fixed';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.top = '-9999px';
+            tempContainer.style.width = '1200px';
             tempContainer.appendChild(pdfContainer);
             document.body.appendChild(tempContainer);
             
@@ -615,38 +766,63 @@ const tableModule = (() => {
                 }
             });
             
-            // Esperar un momento para que el gráfico se renderice
-            setTimeout(() => {
-                console.log('✅ Generando PDF...');
-                
-                const opt = {
-                    margin: [10, 10, 10, 10],
-                    filename: `Incidencias_${new Date().toISOString().split('T')[0]}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-                    jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' },
-                    pagebreak: { mode: 'avoid-all' }
-                };
-                
-                html2pdf()
-                    .set(opt)
-                    .from(pdfContainer)
-                    .save()
-                    .then(() => {
-                        console.log('✅ PDF generado exitosamente');
-                        document.body.removeChild(tempContainer);
-                        alert('✅ PDF exportado exitosamente');
-                    })
-                    .catch((error) => {
-                        console.error('❌ Error generando PDF:', error);
-                        document.body.removeChild(tempContainer);
-                        alert('Error al generar PDF: ' + error.message);
-                    });
-            }, 500);
+            // 🔧 PASO B: ESPERAR A QUE TODAS LAS IMÁGENES CARGUEN
+            console.log('✅ Esperando que las imágenes carguen...');
+            
+            await Promise.all(
+                Array.from(pdfContainer.querySelectorAll('img')).map(img => {
+                    if (!img.complete) {
+                        return new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = resolve;  // También resolver en caso de error
+                        });
+                    }
+                    return Promise.resolve();
+                })
+            );
+            
+            console.log('✅ Todas las imágenes cargaron. Esperando 500ms antes de generar PDF...');
+            
+            // 🔧 PASO C: ESPERAR 500MS ANTES DE GENERAR EL PDF
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log('✅ Generando PDF con html2pdf...');
+            
+            const opt = {
+                margin: 10,
+                filename: `Incidencias_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    allowTaint: true,
+                    logging: false
+                },
+                jsPDF: { 
+                    orientation: 'landscape', 
+                    unit: 'mm', 
+                    format: 'a4' 
+                },
+                pagebreak: { mode: 'avoid-all' }
+            };
+            
+            // Generar PDF
+            await html2pdf().set(opt).from(pdfContainer).save();
+            
+            console.log('✅ PDF generado exitosamente');
+            document.body.removeChild(tempContainer);
+            alert('✅ PDF exportado exitosamente');
             
         } catch (error) {
             console.error('❌ Error en exportación a PDF:', error);
+            console.error('Stack:', error.stack);
             alert('Error al exportar a PDF: ' + error.message);
+            
+            // Limpiar si hay error
+            const tempContainer = document.querySelector('[style*="left: -9999px"]');
+            if (tempContainer && tempContainer.parentNode) {
+                document.body.removeChild(tempContainer);
+            }
         }
     };
 
