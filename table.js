@@ -473,22 +473,22 @@ const tableModule = (() => {
 
     const exportToPdf = async () => {
         try {
-            console.log('📄 Iniciando exportación a PDF...');
+            console.log('📄 Starting PDF export...');
             
-            // Verificar que html2pdf está disponible
+            // Verify html2pdf is available
             if (typeof html2pdf === 'undefined') {
-                console.error('❌ html2pdf no está cargado');
-                alert('Error: Librería html2pdf no está cargada. Por favor recarga la página.');
+                console.error('❌ html2pdf not loaded');
+                alert('Error: html2pdf library is not loaded. Please reload the page.');
                 return;
             }
             
-            // Verificar que hay datos
+            // Verify data exists
             if (!filteredData || filteredData.length === 0) {
-                alert('No hay datos para exportar');
+                alert('No data to export');
                 return;
             }
             
-            console.log('✅ Preparando contenido para PDF...');
+            console.log('✅ Preparing PDF content...');
             
             // Crear contenedor principal
             const pdfContainer = document.createElement('div');
@@ -500,7 +500,7 @@ const tableModule = (() => {
             // 🔧 PASO A: Hacer visible ANTES de capturar
             pdfContainer.style.display = 'block';
             
-            // ===== HEADER CON LOGO Y TÍTULO =====
+            // ===== HEADER WITH LOGO AND TITLE =====
             const header = document.createElement('div');
             header.style.display = 'flex';
             header.style.justifyContent = 'space-between';
@@ -509,7 +509,7 @@ const tableModule = (() => {
             header.style.paddingBottom = '15px';
             header.style.marginBottom = '20px';
             
-            // Logo y título
+            // Logo and title
             const logoSection = document.createElement('div');
             logoSection.style.display = 'flex';
             logoSection.style.alignItems = 'center';
@@ -524,30 +524,30 @@ const tableModule = (() => {
             const titleSection = document.createElement('div');
             titleSection.innerHTML = `
                 <h1 style="margin: 0; color: #8B2323; font-size: 28px; font-weight: bold;">
-                    Sistema de Reportes Liderman
+                    Liderman Reports System
                 </h1>
                 <p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">
-                    Reporte de Incidencias y Puntos de Marcación
+                    Incidents and Checkpoints Report
                 </p>
             `;
             
             logoSection.appendChild(logo);
             logoSection.appendChild(titleSection);
             
-            // Información de fecha y hora
+            // Date and time information
             const dateSection = document.createElement('div');
             dateSection.style.textAlign = 'right';
             const now = new Date();
-            const dateStr = now.toLocaleDateString('es-PE', { 
+            const dateStr = now.toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric' 
             });
-            const timeStr = now.toLocaleTimeString('es-PE');
+            const timeStr = now.toLocaleTimeString('en-US');
             
             dateSection.innerHTML = `
                 <p style="margin: 0; color: #333; font-weight: bold; font-size: 12px;">
-                    Generado: ${dateStr}
+                    Generated: ${dateStr}
                 </p>
                 <p style="margin: 5px 0 0 0; color: #666; font-size: 11px;">
                     ${timeStr}
@@ -558,65 +558,68 @@ const tableModule = (() => {
             header.appendChild(dateSection);
             pdfContainer.appendChild(header);
             
-            // ===== TABLA DE DATOS =====
+            // ===== DATA TABLE ===== 
             const tableSection = document.createElement('div');
-            tableSection.style.marginBottom = '30px';
+            tableSection.style.marginBottom = '20px';
+            tableSection.style.pageBreakInside = 'avoid';
             
             const tableTitle = document.createElement('h2');
-            tableTitle.textContent = 'Detalle de Incidencias';
+            tableTitle.textContent = 'Incidents Detail';
             tableTitle.style.color = '#8B2323';
-            tableTitle.style.fontSize = '16px';
-            tableTitle.style.marginBottom = '10px';
+            tableTitle.style.fontSize = '14px';
+            tableTitle.style.marginBottom = '8px';
+            tableTitle.style.marginTop = '0';
             tableSection.appendChild(tableTitle);
             
-            // Clonar tabla original y aplicar estilos
+            // Clone original table and apply styles
             const originalTable = document.getElementById('dataTable');
             if (originalTable) {
                 const clonedTable = originalTable.cloneNode(true);
                 
-                // Estilos para tabla
+                // Table styles
                 clonedTable.style.width = '100%';
                 clonedTable.style.borderCollapse = 'collapse';
-                clonedTable.style.fontSize = '10px';
+                clonedTable.style.fontSize = '9px';
+                clonedTable.style.pageBreakInside = 'avoid';
                 
-                // Estilos para headers
+                // Header styles
                 const headers = clonedTable.querySelectorAll('thead th');
                 headers.forEach(header => {
                     header.style.backgroundColor = '#8B2323';
                     header.style.color = '#ffffff';
-                    header.style.padding = '12px';
+                    header.style.padding = '8px';
                     header.style.textAlign = 'left';
                     header.style.fontWeight = 'bold';
-                    header.style.border = '2px solid #8B2323';
-                    header.style.fontSize = '11px';
+                    header.style.border = '1px solid #8B2323';
+                    header.style.fontSize = '9px';
                 });
                 
-                // Remover últimas celdas (foto) de headers
+                // Remove last cells (photo) from headers
                 const lastHeader = headers[headers.length - 1];
                 if (lastHeader && lastHeader.textContent.includes('Foto')) {
                     lastHeader.remove();
                 }
                 
-                // Estilos para celdas
+                // Cell styles
                 const cells = clonedTable.querySelectorAll('tbody td');
                 let rowCount = 0;
                 cells.forEach((cell, index) => {
-                    cell.style.padding = '10px 12px';
+                    cell.style.padding = '6px 8px';
                     cell.style.border = '1px solid #ddd';
-                    cell.style.fontSize = '10px';
+                    cell.style.fontSize = '8px';
                     
-                    // Remover imágenes
+                    // Remove images
                     const images = cell.querySelectorAll('img');
                     images.forEach(img => img.remove());
                     
-                    // Remover última celda en cada fila (foto)
+                    // Remove last cell in each row (photo)
                     if ((index + 1) % 5 === 0) {
                         cell.remove();
                         rowCount++;
                     }
                 });
                 
-                // Colores alternados en filas
+                // Alternate row colors
                 const rows = clonedTable.querySelectorAll('tbody tr');
                 rows.forEach((row, idx) => {
                     if (idx % 2 === 0) {
@@ -624,7 +627,7 @@ const tableModule = (() => {
                     } else {
                         row.style.backgroundColor = '#ffffff';
                     }
-                    row.style.borderLeft = '4px solid transparent';
+                    row.style.borderLeft = '3px solid transparent';
                 });
                 
                 tableSection.appendChild(clonedTable);
@@ -632,34 +635,36 @@ const tableModule = (() => {
             
             pdfContainer.appendChild(tableSection);
             
-            // ===== GRÁFICO DE TORTA (Puntos de Marcación) =====
+            // ===== PIE CHART (Checkpoints Distribution) =====
             const chartSection = document.createElement('div');
-            chartSection.style.marginTop = '30px';
-            chartSection.style.paddingTop = '20px';
+            chartSection.style.marginTop = '25px';
+            chartSection.style.paddingTop = '15px';
             chartSection.style.borderTop = '2px solid #ddd';
+            chartSection.style.pageBreakInside = 'avoid';
             
             const chartTitle = document.createElement('h2');
-            chartTitle.textContent = 'Distribución de Puntos de Marcación';
+            chartTitle.textContent = 'Checkpoints Distribution';
             chartTitle.style.color = '#8B2323';
-            chartTitle.style.fontSize = '16px';
-            chartTitle.style.marginBottom = '15px';
+            chartTitle.style.fontSize = '14px';
+            chartTitle.style.marginBottom = '12px';
+            chartTitle.style.marginTop = '0';
             chartSection.appendChild(chartTitle);
             
-            // Calcular distribución de puntos
+            // Calculate checkpoint distribution
             const puntosMap = {};
             filteredData.forEach(item => {
-                const punto = item.punto || 'Sin especificar';
+                const punto = item.punto || 'Not specified';
                 puntosMap[punto] = (puntosMap[punto] || 0) + 1;
             });
             
             const puntosLabels = Object.keys(puntosMap);
             const puntosData = Object.values(puntosMap);
             
-            // Crear canvas para gráfico
+            // Create canvas for chart
             const chartCanvas = document.createElement('canvas');
             chartCanvas.id = 'pdfChart';
-            chartCanvas.width = 400;
-            chartCanvas.height = 300;
+            chartCanvas.width = 350;
+            chartCanvas.height = 250;
             chartCanvas.style.maxWidth = '100%';
             chartCanvas.style.margin = '0 auto';
             chartCanvas.style.display = 'block';
@@ -667,17 +672,18 @@ const tableModule = (() => {
             chartSection.appendChild(chartCanvas);
             pdfContainer.appendChild(chartSection);
             
-            // ===== RESUMEN ESTADÍSTICO =====
+            // ===== STATISTICS SUMMARY =====
             const statsSection = document.createElement('div');
-            statsSection.style.marginTop = '30px';
+            statsSection.style.marginTop = '25px';
             statsSection.style.display = 'grid';
             statsSection.style.gridTemplateColumns = '1fr 1fr 1fr';
-            statsSection.style.gap = '15px';
+            statsSection.style.gap = '12px';
+            statsSection.style.pageBreakInside = 'avoid';
             
             const stats = [
-                { label: 'Total de Registros', value: filteredData.length, icon: '📊' },
-                { label: 'Puntos de Marcación', value: puntosLabels.length, icon: '📍' },
-                { label: 'Fecha Generación', value: new Date().toLocaleDateString('es-PE'), icon: '📅' }
+                { label: 'Total Records', value: filteredData.length, icon: '📊' },
+                { label: 'Checkpoints', value: puntosLabels.length, icon: '📍' },
+                { label: 'Generation Date', value: new Date().toLocaleDateString('en-US'), icon: '📅' }
             ];
             
             stats.forEach(stat => {
@@ -700,36 +706,38 @@ const tableModule = (() => {
             
             // ===== FOOTER =====
             const footer = document.createElement('div');
-            footer.style.marginTop = '30px';
-            footer.style.paddingTop = '15px';
+            footer.style.marginTop = '25px';
+            footer.style.paddingTop = '12px';
             footer.style.borderTop = '2px solid #ddd';
-            footer.style.fontSize = '10px';
+            footer.style.fontSize = '9px';
             footer.style.color = '#999';
             footer.style.textAlign = 'center';
+            footer.style.pageBreakInside = 'avoid';
             
             footer.innerHTML = `
                 <p style="margin: 0;">
-                    📋 Documento generado automáticamente por Sistema de Reportes Liderman
+                    📋 Document automatically generated by Liderman Reports System
                 </p>
-                <p style="margin: 5px 0 0 0;">
-                    🔒 Información confidencial - Uso interno
+                <p style="margin: 4px 0 0 0;">
+                    🔒 Confidential Information - Internal Use Only
                 </p>
             `;
             
             pdfContainer.appendChild(footer);
             
-            // Agregar al DOM temporalmente - AHORA VISIBLE DESDE EL INICIO
+            // Add to DOM temporarily - NOW VISIBLE FROM START
             const tempContainer = document.createElement('div');
-            // 🔧 PASO A: Hacer visible el contenedor DESDE EL INICIO
+            // 🔧 STEP A: Make container visible FROM START
             tempContainer.style.display = 'block';
             tempContainer.style.position = 'fixed';
             tempContainer.style.left = '-9999px';
             tempContainer.style.top = '-9999px';
             tempContainer.style.width = '1200px';
+            tempContainer.style.height = 'auto';
             tempContainer.appendChild(pdfContainer);
             document.body.appendChild(tempContainer);
             
-            // Crear gráfico
+            // Create chart
             const ctx = chartCanvas.getContext('2d');
             const chartColors = ['#8B2323', '#D4504B', '#E89189', '#C8544B', '#A63F38', '#6B1812'];
             
@@ -751,14 +759,14 @@ const tableModule = (() => {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                font: { size: 10 },
-                                padding: 15
+                                font: { size: 9 },
+                                padding: 10
                             }
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.label + ': ' + context.parsed + ' registros';
+                                    return context.label + ': ' + context.parsed + ' records';
                                 }
                             }
                         }
@@ -766,59 +774,60 @@ const tableModule = (() => {
                 }
             });
             
-            // 🔧 PASO B: ESPERAR A QUE TODAS LAS IMÁGENES CARGUEN
-            console.log('✅ Esperando que las imágenes carguen...');
+            // 🔧 STEP B: WAIT FOR ALL IMAGES TO LOAD
+            console.log('✅ Waiting for images to load...');
             
             await Promise.all(
                 Array.from(pdfContainer.querySelectorAll('img')).map(img => {
                     if (!img.complete) {
                         return new Promise((resolve) => {
                             img.onload = resolve;
-                            img.onerror = resolve;  // También resolver en caso de error
+                            img.onerror = resolve;  // Also resolve on error
                         });
                     }
                     return Promise.resolve();
                 })
             );
             
-            console.log('✅ Todas las imágenes cargaron. Esperando 500ms antes de generar PDF...');
+            console.log('✅ All images loaded. Waiting 500ms before generating PDF...');
             
-            // 🔧 PASO C: ESPERAR 500MS ANTES DE GENERAR EL PDF
+            // 🔧 STEP C: WAIT 500MS BEFORE GENERATING PDF
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            console.log('✅ Generando PDF con html2pdf...');
+            console.log('✅ Generating PDF with html2pdf...');
             
             const opt = {
-                margin: 10,
-                filename: `Incidencias_${new Date().toISOString().split('T')[0]}.pdf`,
+                margin: [8, 8, 8, 8],
+                filename: `Report_${new Date().toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
                     useCORS: true, 
                     allowTaint: true,
-                    logging: false
+                    logging: false,
+                    windowHeight: 2000
                 },
                 jsPDF: { 
                     orientation: 'landscape', 
                     unit: 'mm', 
-                    format: 'a4' 
+                    format: 'a4'
                 },
-                pagebreak: { mode: 'avoid-all' }
+                pagebreak: { mode: 'avoid-all', before: '.page-break-before' }
             };
             
-            // Generar PDF
+            // Generate PDF
             await html2pdf().set(opt).from(pdfContainer).save();
             
-            console.log('✅ PDF generado exitosamente');
+            console.log('✅ PDF generated successfully');
             document.body.removeChild(tempContainer);
-            alert('✅ PDF exportado exitosamente');
+            alert('✅ PDF exported successfully');
             
         } catch (error) {
-            console.error('❌ Error en exportación a PDF:', error);
+            console.error('❌ Error in PDF export:', error);
             console.error('Stack:', error.stack);
-            alert('Error al exportar a PDF: ' + error.message);
+            alert('Error exporting PDF: ' + error.message);
             
-            // Limpiar si hay error
+            // Clean up on error
             const tempContainer = document.querySelector('[style*="left: -9999px"]');
             if (tempContainer && tempContainer.parentNode) {
                 document.body.removeChild(tempContainer);
