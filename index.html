@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,16 +11,17 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
+
     <!-- Chart.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    
+
     <!-- Chart.js Data Labels Plugin -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-    
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+
     <!-- XLSX for Excel export - VERSIÓN COMPLETA Y FUNCIONAL -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    
+
     <!-- Garantizar XLSX disponible globalmente con espera -->
     <script>
         let xlsxReady = false;
@@ -35,10 +37,10 @@
         };
         waitForXLSX();
     </script>
-    
+
     <!-- HTML2PDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
+
     <!-- Library Initialization Check -->
     <script>
         // Verificar que las librerías estén disponibles
@@ -51,14 +53,16 @@
             console.log('✅ L (Leaflet):', typeof L !== 'undefined' ? 'Cargado' : 'NO CARGADO');
         });
     </script>
-    
+
     <!-- Leaflet for Maps - Corrected URLs from unpkg -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
     <!-- Languages Configuration -->
     <script src="languages.js"></script>
 </head>
+
 <body>
     <!-- LOGIN PAGE -->
     <div id="loginContainer" class="login-container">
@@ -78,19 +82,14 @@
                     </h1>
                     <p class="login-subtitle" data-i18n="login_subtitle">Reportes e Incidencias</p>
                 </div>
-                
+
                 <form id="loginForm" class="login-form">
                     <div class="form-group">
                         <label for="email" data-i18n="email_label">Correo Electrónico</label>
                         <div class="input-wrapper">
                             <i class="fas fa-envelope"></i>
-                            <input 
-                                type="email" 
-                                id="email" 
-                                data-i18n-placeholder="email_placeholder"
-                                placeholder="@liderman.com.pe" 
-                                required
-                            >
+                            <input type="email" id="email" data-i18n-placeholder="email_placeholder"
+                                placeholder="@liderman.com.pe" required>
                         </div>
                     </div>
 
@@ -98,13 +97,8 @@
                         <label for="password" data-i18n="password_label">Contraseña</label>
                         <div class="input-wrapper">
                             <i class="fas fa-lock"></i>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                data-i18n-placeholder="password_placeholder"
-                                placeholder="••••••••" 
-                                required
-                            >
+                            <input type="password" id="password" data-i18n-placeholder="password_placeholder"
+                                placeholder="••••••••" required>
                         </div>
                     </div>
 
@@ -130,12 +124,15 @@
     <div id="appContainer" class="app-container" style="display: none;">
         <!-- SIDEBAR NAVIGATION -->
         <aside class="sidebar">
-            <div class="sidebar-header" style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 10px;">
-                <img src="logo.png" alt="Logo" style="height: 48px; width: 48px; border-radius: 12px; box-shadow: 0 2px 8px rgba(220,38,38,0.15); background: #fff; margin-bottom: 4px;">
+            <div class="sidebar-header"
+                style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 10px;">
+                <img src="logo.png" alt="Logo"
+                    style="height: 48px; width: 48px; border-radius: 12px; box-shadow: 0 2px 8px rgba(220,38,38,0.15); background: #fff; margin-bottom: 4px;">
                 <h2 class="sidebar-title" style="color: #fff; font-weight: 800; font-size: 22px; letter-spacing: 1px;">
                     <span data-i18n="sistema_de_reportes">Sistema de Reportes</span> Liderman
                 </h2>
-                <button class="btn-hamburger" id="toggleSidebar" style="margin-top: 6px; background: #fff; border: 2px solid #dc2626; border-radius: 8px; padding: 6px 12px; color: #dc2626; font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(220,38,38,0.10);">
+                <button class="btn-hamburger" id="toggleSidebar"
+                    style="margin-top: 6px; background: #fff; border: 2px solid #dc2626; border-radius: 8px; padding: 6px 12px; color: #dc2626; font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(220,38,38,0.10);">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
@@ -258,10 +255,59 @@
 
                 <!-- SECURITY TAB CONTENT -->
                 <div id="securityContent" class="tab-content">
-                    <div class="empty-state">
-                        <i class="fas fa-lock"></i>
-                        <h2>Seguridad</h2>
-                        <p data-i18n="security_soon">Próximamente...</p>
+                    <!-- SUMMARY CARDS -->
+                    <div class="dashboard-metrics">
+                        <div class="card card-metric">
+                            <div class="card-header">
+                                <h3 data-i18n="total_records">Total de Registros</h3>
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="card-body">
+                                <div class="metric-value" id="totalRecordsSec">0</div>
+                                <p class="metric-label" data-i18n="incident_records">Incidencias de Seguridad</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- CHARTS GRID 2x2 -->
+                    <div class="dashboard-charts-grid">
+                        <!-- Chart 1: Registros por Fecha (Top Left) -->
+                        <div class="card card-chart">
+                            <div class="card-header">
+                                <h3 data-i18n="records_by_date">Registros por Fecha</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="lineChartDateSec"></canvas>
+                            </div>
+                        </div>
+                        <!-- Chart 2: Registros por Agente (Top Right) -->
+                        <div class="card card-chart">
+                            <div class="card-header">
+                                <h3 data-i18n="records_by_agent">Registros por Agente</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="barChartAgentSec"></canvas>
+                            </div>
+                        </div>
+                        <!-- Chart 3: Puntos de Marcación (Bottom Left) -->
+                        <div class="card card-chart">
+                            <div class="card-header">
+                                <h3 data-i18n="marking_points">Puntos de Marcación</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="pieChartPointsSec"></canvas>
+                            </div>
+                        </div>
+                        <!-- Chart 4: Ubicación de Marcaciones (Bottom Right) -->
+                        <div class="card card-map">
+                            <div class="card-header">
+                                <h3 data-i18n="marking_location">Ubicación de Marcaciones</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="map-container">
+                                    <div id="mapSec" style="width: 100%; height: 100%; border-radius: 12px;"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -337,10 +383,62 @@
 
                 <!-- SECURITY TABLE CONTENT -->
                 <div id="securityTableContent" class="tab-content">
-                    <div class="empty-state">
-                        <i class="fas fa-lock"></i>
-                        <h2>Seguridad</h2>
-                        <p>Próximamente...</p>
+                    <!-- FILTERS -->
+                    <div class="card card-filters">
+                        <div class="card-header">
+                            <h3 data-i18n="filters_title">Filtros (Security)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label data-i18n="from_date">Desde</label>
+                                    <input type="date" id="filterFromDateSec">
+                                </div>
+                                <div class="filter-group">
+                                    <label data-i18n="to_date">Hasta</label>
+                                    <input type="date" id="filterToDateSec">
+                                </div>
+                                <button id="filterBtnSec" class="btn-filter">
+                                    <i class="fas fa-filter"></i> <span data-i18n="filter_button">Filtrar</span>
+                                </button>
+                                <button id="resetFilterBtnSec" class="btn-reset">
+                                    <i class="fas fa-redo"></i> <span data-i18n="clear_button">Limpiar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EXPORT BUTTONS -->
+                    <div class="export-actions">
+                        <button id="exportExcelBtnSec" class="btn-export btn-excel">
+                            <i class="fas fa-file-excel"></i> <span data-i18n="export_excel">Exportar Excel</span>
+                        </button>
+                        <button id="exportPdfBtnSec" class="btn-export btn-pdf">
+                            <i class="fas fa-file-pdf"></i> <span data-i18n="export_pdf">Exportar PDF</span>
+                        </button>
+                    </div>
+
+                    <!-- DATA TABLE -->
+                    <div class="card card-table">
+                        <div id="tableInfoSec" style="padding: 10px 20px; color: #666; font-size: 13px;"></div>
+                        <div class="table-wrapper">
+                            <table id="dataTableSec" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Nombre</th>
+                                        <th>Punto de Marcación</th>
+                                        <th>Observación</th>
+                                        <th>Foto</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBodySec">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="paginationControlsSec"
+                            style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 15px; border-top: 1px solid #eee;">
+                        </div>
                     </div>
                 </div>
             </section>
@@ -364,13 +462,13 @@
     <script src="app.js"></script>
     <script src="table.js"></script>
     <script src="init.js"></script>
-    
+
     <!-- Debug Script -->
     <script>
         console.log('='.repeat(50));
         console.log('🎯 SCRIPT DE DEBUG');
         console.log('='.repeat(50));
-        
+
         // Monitor Firebase initialization
         setTimeout(() => {
             console.log('\n📊 ESTADO DE FIREBASE:');
@@ -378,26 +476,27 @@
             console.log('   window.auth:', window.auth ? '✅' : '❌');
             console.log('   window.db:', window.db ? '✅' : '❌');
             console.log('   window.firebaseReady:', window.firebaseReady ? '✅' : '❌');
-            
+
             console.log('\n📊 ESTADO DEL DOM:');
             const emailInput = document.getElementById('email');
             const passwordInput = document.getElementById('password');
             console.log('   loginForm:', document.getElementById('loginForm') ? '✅' : '❌');
             console.log('   email input:', emailInput ? '✅' : '❌');
             console.log('   password input:', passwordInput ? '✅' : '❌');
-            
+
             if (emailInput) {
                 console.log('   email clickeable:', emailInput.offsetParent !== null ? '✅' : '❌');
             }
-            
+
             console.log('\n📊 MÓDULOS CARGADOS:');
             console.log('   authModule:', typeof authModule !== 'undefined' ? '✅' : '❌');
             console.log('   dashboardModule:', typeof dashboardModule !== 'undefined' ? '✅' : '❌');
             console.log('   tableModule:', typeof tableModule !== 'undefined' ? '✅' : '❌');
             console.log('   appModule:', typeof appModule !== 'undefined' ? '✅' : '❌');
-            
+
             console.log('\n' + '='.repeat(50));
         }, 2000);
     </script>
 </body>
+
 </html>

@@ -1,131 +1,40 @@
-// Dashboard Module - Fully Refactored & Complete
-console.log('📊 Cargando Dashboard COMPLETO...');
+// Dashboard Module - Heatmap & Dual Tabs (Markers & Centering Fix)
+console.log('📊 Cargando Dashboard MEJORADO (MARKERS)...');
 
-// Registrar el plugin DataLabels (OBLIGATORIO en Chart.js v3+)
-Chart.register(ChartDataLabels);
-console.log('✅ Plugin ChartDataLabels registrado correctamente...');
-
-/***************************************************************************
- *  DASHBOARD MODULE
- *  - Código ordenado, completo y sin omisiones
- *  - Gráficos funcionales
- *  - Mapa corregido (coordenadas Firebase)
- *  - Optimizaciones de rendimiento
- ***************************************************************************/
+if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+    Chart.register(ChartDataLabels);
+}
 
 const dashboardModule = (() => {
-    let incidenciasData = [];
+    let allData = [];
+
+    // Facility components
     let lineChartDate = null;
     let barChartAgent = null;
     let pieChartPoints = null;
     let map = null;
-    let markers = [];
-    let filteredData = [];
-    let dateFilterStart = null;
-    let dateFilterEnd = null;
+    let heatLayer = null;
+    let markersLayer = null; // Group for facility markers
 
-    /***************************************************************************
-     * EXTRAER COORDENADAS
-     ***************************************************************************/
-    const extractCoordinates = (item) => {
-        if (!item.ubicacion || typeof item.ubicacion !== 'object') return null;
+    // Security components
+    let lineChartDateSec = null;
+    let barChartAgentSec = null;
+    let pieChartPointsSec = null;
+    let mapSec = null;
+    let heatLayerSec = null;
+    let markersLayerSec = null; // Group for security markers
 
-        const lat = parseFloat(item.ubicacion.lat);
-        const lng = parseFloat(item.ubicacion.lng);
-
-        if (lat === null || lng === null) return null;
-        if (isNaN(lat) || isNaN(lng)) return null;
-        if (lat < -90 || lat > 90) return null;
-        if (lng < -180 || lng > 180) return null;
-
-        return { lat, lng };
-    };
-
-    /***************************************************************************
-     * INICIALIZACIÓN
-     ***************************************************************************/
     const init = () => {
+        console.log('📊 Init Dashboard (Dual Tabs)');
         if (!window.db || !window.firebaseReady) {
             setTimeout(init, 500);
             return;
         }
-
         fetchData();
         setupTabListeners();
         setupDateFilters();
     };
 
-    /***************************************************************************
-     * FILTROS DE FECHA
-     ***************************************************************************/
-    const setupDateFilters = () => {
-        const filterContainer = document.getElementById('dashboardFilterContainer');
-        if (!filterContainer) return;
-
-        const filterHTML = `
-            <div class="dashboard-filter-modern" style="display: flex; gap: 16px; padding: 18px 20px; background: linear-gradient(135deg, #fff 0%, #ffeaea 100%); border-radius: 14px; margin-bottom: 24px; align-items: center; box-shadow: 0 2px 8px rgba(220,38,38,0.08); border: 1.5px solid #dc2626;">
-                <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
-                    <img src="logo.png" alt="Logo" style="height: 32px; width: 32px; border-radius: 8px; box-shadow: 0 2px 8px rgba(220,38,38,0.15); background: #fff;">
-                    <label style="font-weight: 700; color: #dc2626; font-size: 15px; min-width: 60px;">Desde:</label>
-                    <input type="date" id="dateFilterStart" style="padding: 10px 13px; border: 1.5px solid #dc2626; border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; color: #1a1a1a; font-weight: 500;">
-                </div>
-                <div style="width: 1px; height: 28px; background: #dc2626;"></div>
-                <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
-                    <label style="font-weight: 700; color: #dc2626; font-size: 15px; min-width: 60px;">Hasta:</label>
-                    <input type="date" id="dateFilterEnd" style="padding: 10px 13px; border: 1.5px solid #dc2626; border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; color: #1a1a1a; font-weight: 500;">
-                </div>
-                <button id="applyDateFilter" style="padding: 10px 22px; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.3s; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.18);">Filtrar</button>
-                <button id="clearDateFilter" style="padding: 10px 22px; background: #fff; color: #dc2626; border: 1.5px solid #dc2626; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.3s;">Limpiar</button>
-            </div>
-        `;
-
-        filterContainer.innerHTML = filterHTML;
-
-        document.getElementById('applyDateFilter').addEventListener('click', applyDateFilter);
-        document.getElementById('clearDateFilter').addEventListener('click', clearDateFilter);
-        // Hover effect
-        const applyBtn = document.getElementById('applyDateFilter');
-        applyBtn.addEventListener('mouseover', () => applyBtn.style.boxShadow = '0 4px 16px rgba(220, 38, 38, 0.25)');
-        applyBtn.addEventListener('mouseout', () => applyBtn.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.18)');
-    };
-
-    const applyDateFilter = () => {
-        const startInput = document.getElementById('dateFilterStart').value;
-        const endInput = document.getElementById('dateFilterEnd').value;
-
-        if (!startInput || !endInput) {
-            alert('Por favor selecciona ambas fechas');
-            return;
-        }
-
-        dateFilterStart = new Date(startInput);
-        dateFilterEnd = new Date(endInput);
-        dateFilterEnd.setHours(23, 59, 59, 999);
-
-        filteredData = incidenciasData.filter(item => {
-            let itemDate = null;
-            if (item.createdAt?.toDate) itemDate = item.createdAt.toDate();
-            else if (typeof item.createdAt === 'string') itemDate = new Date(item.createdAt);
-
-            if (!itemDate) return false;
-            return itemDate >= dateFilterStart && itemDate <= dateFilterEnd;
-        });
-
-        updateDashboard(true);
-    };
-
-    const clearDateFilter = () => {
-        dateFilterStart = null;
-        dateFilterEnd = null;
-        filteredData = [];
-        document.getElementById('dateFilterStart').value = '';
-        document.getElementById('dateFilterEnd').value = '';
-        updateDashboard(false);
-    };
-
-    /***************************************************************************
-     * LISTENERS DE TABS
-     ***************************************************************************/
     const setupTabListeners = () => {
         const tabBtns = document.querySelectorAll('.facility-security-tabs .tab-btn');
         tabBtns.forEach(btn => btn.addEventListener('click', switchTab));
@@ -143,342 +52,260 @@ const dashboardModule = (() => {
 
         e.currentTarget.classList.add('active');
         const tabName = e.currentTarget.dataset.tab;
-        document.getElementById(tabName + 'Content').classList.add('active');
+        const content = document.getElementById(tabName + 'Content');
+        if (content) content.classList.add('active');
 
-        setTimeout(() => {
-            if (lineChartDate) lineChartDate.resize();
-            if (barChartAgent) barChartAgent.resize();
-            if (pieChartPoints) pieChartPoints.resize();
-            if (map) map.invalidateSize();
-        }, 100);
+        triggerMapResize();
     };
 
-    /***************************************************************************
-     * FIRESTORE: OBTENER DATOS
-     ***************************************************************************/
+    const triggerMapResize = () => {
+        if (map) map.invalidateSize();
+        if (mapSec) mapSec.invalidateSize();
+
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+            if (mapSec) mapSec.invalidateSize();
+        }, 100);
+
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+            if (mapSec) mapSec.invalidateSize();
+        }, 400);
+    };
+
+    const setupDateFilters = () => {
+        const container = document.getElementById('dashboardFilterContainer');
+        if (container && container.innerHTML.trim() === '') {
+            container.innerHTML = `
+                 <div style="display:flex; gap:10px; margin-bottom:20px; align-items:flex-end;">
+                     <div>
+                         <label style="display:block; font-size:12px; font-weight:bold;">Desde</label>
+                         <input type="date" id="dashFrom" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+                     </div>
+                     <div>
+                         <label style="display:block; font-size:12px; font-weight:bold;">Hasta</label>
+                         <input type="date" id="dashTo" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+                     </div>
+                     <button id="dashFilterBtn" style="background:#dc2626; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Filtrar</button>
+                     <button id="dashResetBtn" style="background:#fff; color:#333; border:1px solid #ccc; padding:8px 16px; border-radius:6px; cursor:pointer;">Limpiar</button>
+                 </div>
+             `;
+            document.getElementById('dashFilterBtn').addEventListener('click', () => filterDashboard());
+            document.getElementById('dashResetBtn').addEventListener('click', () => {
+                document.getElementById('dashFrom').value = '';
+                document.getElementById('dashTo').value = '';
+                processData(allData);
+            });
+        }
+    };
+
+    const filterDashboard = () => {
+        const f = document.getElementById('dashFrom').value;
+        const t = document.getElementById('dashTo').value;
+        if (!f || !t) return alert('Seleccione fechas');
+
+        const fromDate = new Date(f);
+        const toDate = new Date(t);
+        toDate.setHours(23, 59, 59);
+
+        const filtered = allData.filter(d => {
+            const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+            return date >= fromDate && date <= toDate;
+        });
+        processData(filtered);
+    };
+
     const fetchData = async () => {
         try {
             const snapshot = await window.db.collection('IncidenciasEU').get();
-            incidenciasData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            updateDashboard();
+            allData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            processData(allData);
         } catch (err) {
             console.error(err);
         }
     };
 
-    /***************************************************************************
-     * ACTUALIZAR DASHBOARD
-     ***************************************************************************/
-    const updateDashboard = (isFiltered = false) => {
-        const dataToUse = isFiltered && filteredData.length > 0 ? filteredData : incidenciasData;
-        updateCounters(dataToUse);
-        renderLineChart(dataToUse);
-        renderBarChart(dataToUse);
-        renderPieChart(dataToUse);
-        setTimeout(() => initMap(dataToUse), 500);
+    const processData = (data) => {
+        const facilityData = data.filter(d => !d.tipoServicio || d.tipoServicio === 'Facility');
+        const securityData = data.filter(d => d.tipoServicio === 'Security');
+
+        updateFacilityDashboard(facilityData);
+        updateSecurityDashboard(securityData);
     };
 
-    /***************************************************************************
-     * CONTADOR TOTAL
-     ***************************************************************************/
-    const updateCounters = (data) => {
-        const element = document.getElementById('totalRecords');
-        if (element) {
-            element.textContent = data.length;
-            // Hacer la tarjeta más pequeña
-            element.style.fontSize = '24px';
-            element.style.fontWeight = 'bold';
-            element.style.color = '#6366f1';
-        }
+    const updateFacilityDashboard = (data) => {
+        document.getElementById('totalRecords').textContent = data.length;
+        const dateCounts = getDateCounts(data);
+        const agentCounts = getAgentCounts(data);
+        const pointCounts = getPointCounts(data);
+        updateChart('lineChartDate', 'line', dateCounts, 'Incidencias', '#dc2626', (chart) => lineChartDate = chart);
+        updateChart('barChartAgent', 'bar', agentCounts, 'Registros', '#dc2626', (chart) => barChartAgent = chart, { indexAxis: 'y' });
+        updateChart('pieChartPoints', 'doughnut', pointCounts, 'Puntos', ['#dc2626', '#b91c1c', '#f87171'], (chart) => pieChartPoints = chart);
+        updateMap(data, 'map', 'facility');
     };
 
-    /***************************************************************************
-     * GRÁFICO 1 — Registros por Fecha
-     ***************************************************************************/
-    const renderLineChart = (data) => {
-        const dateMap = {};
+    const updateSecurityDashboard = (data) => {
+        document.getElementById('totalRecordsSec').textContent = data.length;
+        const dateCounts = getDateCounts(data);
+        const agentCounts = getAgentCounts(data);
+        const pointCounts = getPointCounts(data);
+        updateChart('lineChartDateSec', 'line', dateCounts, 'Incidencias', '#4f46e5', (chart) => lineChartDateSec = chart);
+        updateChart('barChartAgentSec', 'bar', agentCounts, 'Registros', '#4f46e5', (chart) => barChartAgentSec = chart, { indexAxis: 'y' });
+        updateChart('pieChartPointsSec', 'doughnut', pointCounts, 'Puntos', ['#4f46e5', '#4338ca', '#818cf8'], (chart) => pieChartPointsSec = chart);
+        updateMap(data, 'mapSec', 'security');
+    };
 
-        data.forEach(item => {
-            let d = null;
-            if (item.createdAt?.toDate) d = item.createdAt.toDate();
-            else if (typeof item.createdAt === 'string') d = new Date(item.createdAt);
-
-            if (!d || isNaN(d)) return;
-
-            const key = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
-            dateMap[key] = (dateMap[key] || 0) + 1;
-        });
-
-        const labels = Object.keys(dateMap);
-        const values = Object.values(dateMap);
-
-        const ctx = document.getElementById('lineChartDate').getContext('2d');
-        if (lineChartDate) lineChartDate.destroy();
-
-        lineChartDate = new Chart(ctx, {
-            type: 'line',
+    const updateChart = (canvasId, type, dataMap, label, color, setterRef, extraOptions = {}) => {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const existing = Chart.getChart(ctx);
+        if (existing) existing.destroy();
+        const labels = Object.keys(dataMap);
+        const values = Object.values(dataMap);
+        const bg = Array.isArray(color) ? color : (type === 'line' ? color + '1A' : color);
+        const border = Array.isArray(color) ? color : color;
+        const chart = new Chart(ctx, {
+            type: type,
             data: {
-                labels,
+                labels: labels,
                 datasets: [{
-                    label: 'Registros por Fecha',
+                    label: label,
                     data: values,
-                    borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99,102,241,0.15)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 6,
-                    pointBackgroundColor: '#6366f1',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2
+                    backgroundColor: bg,
+                    borderColor: border,
+                    borderWidth: 1,
+                    fill: type === 'line',
+                    tension: 0.1
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    datalabels: {
-                        display: true,
-                        anchor: 'center',
-                        align: 'center',
-                        color: '#fff',
-                        font: { weight: 'bold', size: 14 },
-                        backgroundColor: 'rgba(99, 102, 241, 0.9)',
-                        borderRadius: 4,
-                        padding: 5,
-                        formatter: function(value) {
-                            return value;
-                        }
-                    },
-                    legend: {
-                        display: true,
-                        labels: { color: '#64748b', font: { size: 11, weight: 600 } }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' },
-                        ticks: { color: '#64748b' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#64748b' }
-                    }
-                }
+                ...extraOptions,
+                plugins: { legend: { display: type === 'doughnut' } }
             }
         });
+        setterRef(chart);
     };
 
-    /***************************************************************************
-     * GRÁFICO 2 — Registros por Agente
-     ***************************************************************************/
-    const renderBarChart = (data) => {
-        const agentMap = {};
+    // ================= MAP LOGIC (Markers + Heatmap) =================
+    const updateMap = (data, elementId, type) => {
+        if (!L) return;
+        const mapElement = document.getElementById(elementId);
+        if (!mapElement) return;
 
-        data.forEach(item => {
-            const ag = item.nombreAgente || 'Sin asignar';
-            agentMap[ag] = (agentMap[ag] || 0) + 1;
-        });
+        let targetMap = (type === 'facility') ? map : mapSec;
 
-        const labels = Object.keys(agentMap);
-        const values = Object.values(agentMap);
-
-        const ctx = document.getElementById('barChartAgent').getContext('2d');
-        if (barChartAgent) barChartAgent.destroy();
-
-        barChartAgent = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Registros por Agente',
-                    data: values,
-                    backgroundColor: ['#6366f1','#ec4899','#f59e0b','#10b981','#06b6d4','#8b5cf6'],
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    datalabels: {
-                        display: true,
-                        anchor: 'center',
-                        align: 'center',
-                        color: '#fff',
-                        font: { weight: 'bold', size: 13 },
-                        offset: 0,
-                        formatter: function(value) {
-                            return value;
-                        }
-                    },
-                    legend: {
-                        display: true,
-                        labels: { color: '#64748b', font: { size: 11, weight: 600 } }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' },
-                        ticks: { color: '#64748b' }
-                    },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: '#64748b' }
-                    }
-                }
-            }
-        });
-    };
-
-    /***************************************************************************
-     * GRÁFICO 3 — Puntos de Marcación
-     ***************************************************************************/
-    const renderPieChart = (data) => {
-        const pointMap = {};
-
-        data.forEach(item => {
-            const p = item.punto || 'Sin punto';
-            pointMap[p] = (pointMap[p] || 0) + 1;
-        });
-
-        const labels = Object.keys(pointMap);
-        const values = Object.values(pointMap);
-        const colors = ['#6366f1','#ec4899','#f59e0b','#10b981','#06b6d4','#8b5cf6','#14b8a6','#f97316'];
-
-        const ctx = document.getElementById('pieChartPoints').getContext('2d');
-        if (pieChartPoints) pieChartPoints.destroy();
-
-        pieChartPoints = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: colors.slice(0, labels.length),
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    datalabels: {
-                        display: true,
-                        color: '#fff',
-                        font: { weight: 'bold', size: 13 },
-                        formatter: (value, ctx) => {
-                            const dataset = ctx.dataset.data;
-                            const total = dataset.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${value}\n${percentage}%`;
-                        }
-                    },
-                    legend: {
-                        position: 'right',
-                        labels: { color: '#64748b', font: { size: 11, weight: 600 }, padding: 15 }
-                    }
-                }
-            }
-        });
-    };
-
-    /***************************************************************************
-     * MAPA LEAFLET — COMPLETO
-     ***************************************************************************/
-    const initMap = (data) => {
-        if (!L) return console.error('Leaflet no cargado');
-
-        const mapEl = document.getElementById('map');
-        if (!mapEl) return;
-
-        if (!map) {
-            map = L.map('map').setView([25.77, -80.25], 12);
+        if (!targetMap) {
+            targetMap = L.map(elementId).setView([37.0902, -95.7129], 4);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap', maxZoom: 19
-            }).addTo(map);
+                attribution: '© OpenStreetMap'
+            }).addTo(targetMap);
+            if (type === 'facility') map = targetMap;
+            else mapSec = targetMap;
+            const resizeObserver = new ResizeObserver(() => targetMap.invalidateSize());
+            resizeObserver.observe(mapElement);
         }
 
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
+        // --- Clear Layers ---
+        let currentHeat = (type === 'facility') ? heatLayer : heatLayerSec;
+        if (currentHeat) targetMap.removeLayer(currentHeat);
 
-        const lats = [], lngs = [];
+        let currentMarkers = (type === 'facility') ? markersLayer : markersLayerSec;
+        if (currentMarkers) targetMap.removeLayer(currentMarkers);
+
+        const heatPoints = [];
+        const markerArray = [];
+        const validPoints = [];
 
         data.forEach(item => {
-            const coords = extractCoordinates(item);
-            if (!coords) return;
+            if (item.ubicacion && item.ubicacion.lat && item.ubicacion.lng) {
+                const lat = parseFloat(item.ubicacion.lat);
+                const lng = parseFloat(item.ubicacion.lng);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    // Heatmap point
+                    heatPoints.push([lat, lng, 0.8]);
+                    validPoints.push([lat, lng]);
 
-            const { lat, lng } = coords;
-            lats.push(lat);
-            lngs.push(lng);
+                    // Marker
+                    const markerColor = (type === 'facility') ? '#dc2626' : '#4f46e5'; // Red vs Blue/Indigo
 
-            // Formatear fecha con horas y minutos
-            let fechaFormato = 'Sin fecha';
-            if (item.createdAt) {
-                let d = null;
-                if (item.createdAt.toDate) d = item.createdAt.toDate();
-                else if (typeof item.createdAt === 'string') d = new Date(item.createdAt);
+                    // Simple Circle Marker for performance and aesthetics
+                    const marker = L.circleMarker([lat, lng], {
+                        radius: 8,
+                        fillColor: markerColor,
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
 
-                if (d && !isNaN(d)) {
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const year = String(d.getFullYear()).slice(-2);
-                    const hour = String(d.getHours()).padStart(2, '0');
-                    const minute = String(d.getMinutes()).padStart(2, '0');
-                    fechaFormato = `${day}/${month}/${year} ${hour}:${minute}`;
+                    marker.bindPopup(`
+                        <div style="font-size:12px;">
+                            <strong>${item.nombreAgente || 'Agente'}</strong><br/>
+                            ${item.punto || ''}<br/>
+                            <small>${formatDate(item.createdAt)}</small>
+                        </div>
+                    `);
+
+                    markerArray.push(marker);
                 }
             }
-
-            const marker = L.circleMarker([lat, lng], {
-                radius: 10,
-                fillColor: '#dc2626',
-                color: '#fff',
-                weight: 3,
-                fillOpacity: 0.9
-            }).addTo(map);
-
-            marker.bindPopup(`
-                <div style="font-family: Arial, sans-serif; font-size: 12px; width: 220px;">
-                    <strong style="color: #dc2626;">📍 ${item.nombreAgente || 'Agente Desconocido'}</strong><br>
-                    <small><strong>Punto:</strong> ${item.punto || 'N/A'}</small><br>
-                    <small><strong>Fecha:</strong> ${fechaFormato}</small><br>
-                    <small style="color: #999;"><strong>Coords:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</small>
-                </div>
-            `);
-
-            markers.push(marker);
         });
 
-        if (lats.length) {
-            const bounds = L.latLngBounds(
-                [Math.min(...lats), Math.min(...lngs)],
-                [Math.max(...lats), Math.max(...lngs)]
-            );
-            map.fitBounds(bounds, { padding: [40,40] });
+        // Add Heatmap
+        if (typeof L.heatLayer === 'function' && heatPoints.length > 0) {
+            const gradient = (type === 'facility')
+                ? { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
+                : { 0.4: 'cyan', 0.65: 'blue', 1: 'purple' };
+            const newLayer = L.heatLayer(heatPoints, {
+                radius: 25, blur: 15, maxZoom: 10, gradient: gradient
+            }).addTo(targetMap);
+            if (type === 'facility') heatLayer = newLayer; else heatLayerSec = newLayer;
         }
 
-        setTimeout(() => map.invalidateSize(), 300);
+        // Add Markers (Always add markers so single points are visible)
+        if (markerArray.length > 0) {
+            const newMarkerLayer = L.layerGroup(markerArray).addTo(targetMap);
+            if (type === 'facility') markersLayer = newMarkerLayer; else markersLayerSec = newMarkerLayer;
+        }
+
+        // Center Map
+        if (validPoints.length === 1) {
+            // If strictly 1 point, simplify the view
+            targetMap.setView(validPoints[0], 15);
+        } else if (validPoints.length > 1) {
+            const bounds = L.latLngBounds(validPoints);
+            targetMap.fitBounds(bounds, { padding: [50, 50] });
+        } else {
+            // No points, default view?
+            // Keep default
+        }
+
+        setTimeout(() => targetMap.invalidateSize(), 200);
     };
 
-    /***************************************************************************
-     * EXPONER MÉTODOS DEL MÓDULO
-     ***************************************************************************/
-    return {
-        init,
-        reload: fetchData
+    const getDateCounts = (data) => {
+        const counts = {};
+        data.forEach(d => {
+            const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+            if (isNaN(date)) return;
+            const key = date.toLocaleDateString('es-PE');
+            counts[key] = (counts[key] || 0) + 1;
+        });
+        return counts;
     };
+    const getAgentCounts = (d) => { const c = {}; d.forEach(x => { const n = x.nombreAgente || 'N/A'; c[n] = (c[n] || 0) + 1; }); return c; };
+    const getPointCounts = (d) => { const c = {}; d.forEach(x => { const p = x.punto || 'N/A'; c[p] = (c[p] || 0) + 1; }); return c; };
+
+    // Quick format helper for popups
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        try {
+            const d = dateString.toDate ? dateString.toDate() : new Date(dateString);
+            return d.toLocaleDateString();
+        } catch (e) { return ''; }
+    };
+
+    return { init, reload: fetchData };
 })();
-
-/***************************************************************************
- * EJECUCIÓN AUTOMÁTICA DEL DASHBOARD
- ***************************************************************************/
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('dashboardPage')) {
-        console.log('🚀 Iniciando Dashboard...');
-        dashboardModule.init();
-    }
-});
