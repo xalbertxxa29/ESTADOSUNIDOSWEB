@@ -41,6 +41,10 @@
     <!-- HTML2PDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+    <!-- jsPDF standalone + autoTable for programmatic large-dataset PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
     <!-- Library Initialization Check -->
     <script>
         // Verificar que las librerías estén disponibles
@@ -122,6 +126,13 @@
 
     <!-- MAIN APP CONTAINER -->
     <div id="appContainer" class="app-container" style="display: none;">
+        <!-- LOADING OVERLAY -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="loader-content">
+                <div class="spinner"></div>
+                <p id="loadingMessage">Procesando...</p>
+            </div>
+        </div>
         <!-- SIDEBAR NAVIGATION -->
         <aside class="sidebar">
             <div class="sidebar-header"

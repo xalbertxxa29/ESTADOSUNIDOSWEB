@@ -56,6 +56,9 @@ const dashboardModule = (() => {
         setupDateFilters();
     };
 
+    let currentFacilityData = [];
+    let currentSecurityData = [];
+
     const setupTabListeners = () => {
         const tabBtns = document.querySelectorAll('.facility-security-tabs .tab-btn');
         tabBtns.forEach(btn => btn.addEventListener('click', switchTab));
@@ -76,14 +79,18 @@ const dashboardModule = (() => {
         const content = document.getElementById(tabName + 'Content');
         if (content) content.classList.add('active');
 
-        triggerMapResize();
+        // Refrescar mapa al cambiar de pestaña para evitar errores de renderizado
+        setTimeout(() => {
+            if (tabName === 'facility') updateMap(currentFacilityData, 'map', 'facility');
+            else updateMap(currentSecurityData, 'mapSec', 'security');
+            triggerMapResize();
+        }, 50);
     };
 
     const triggerMapResize = () => {
         if (map) map.invalidateSize();
         if (mapSec) mapSec.invalidateSize();
-        setTimeout(() => { if (map) map.invalidateSize(); if (mapSec) mapSec.invalidateSize(); }, 100);
-        setTimeout(() => { if (map) map.invalidateSize(); if (mapSec) mapSec.invalidateSize(); }, 400);
+        setTimeout(() => { if (map) map.invalidateSize(); if (mapSec) mapSec.invalidateSize(); }, 200);
     };
 
     const setupDateFilters = () => {
@@ -117,14 +124,29 @@ const dashboardModule = (() => {
         const t = document.getElementById('dashTo').value;
         if (!f || !t) return alert('Seleccione fechas');
 
+        console.log(`🔍 Filtrando Dashboard: ${f} a ${t}`);
+
         const fromDate = new Date(f);
+        fromDate.setHours(0, 0, 0, 0); // Start of day
+
         const toDate = new Date(t);
-        toDate.setHours(23, 59, 59);
+        toDate.setHours(23, 59, 59, 999); // End of day
 
         const filtered = allData.filter(d => {
-            const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+            let date;
+            if (d.createdAt && typeof d.createdAt.toDate === 'function') {
+                date = d.createdAt.toDate();
+            } else if (d.createdAt) {
+                date = new Date(d.createdAt);
+            } else {
+                return false;
+            }
+
+            if (isNaN(date.getTime())) return false;
             return date >= fromDate && date <= toDate;
         });
+
+        console.log(`✅ Registros filtrados: ${filtered.length}`);
         processData(filtered);
     };
 
@@ -139,16 +161,17 @@ const dashboardModule = (() => {
     };
 
     const processData = (data) => {
-        const facilityData = data.filter(d => !d.tipoServicio || d.tipoServicio === 'Facility');
-        const securityData = data.filter(d => d.tipoServicio === 'Security');
+        currentFacilityData = data.filter(d => !d.tipoServicio || d.tipoServicio === 'Facility');
+        currentSecurityData = data.filter(d => d.tipoServicio === 'Security');
 
-        updateFacilityDashboard(facilityData);
-        updateSecurityDashboard(securityData);
+        updateFacilityDashboard(currentFacilityData);
+        updateSecurityDashboard(currentSecurityData);
     };
 
     // ================= FACILITY RENDER =================
     const updateFacilityDashboard = (data) => {
-        document.getElementById('totalRecords').textContent = data.length;
+        const totalEl = document.getElementById('totalRecords');
+        if (totalEl) totalEl.textContent = data.length;
         const dateCounts = getDateCounts(data);
         const agentCounts = getAgentCounts(data);
         const pointCounts = getPointCounts(data);
@@ -167,7 +190,8 @@ const dashboardModule = (() => {
 
     // ================= SECURITY RENDER =================
     const updateSecurityDashboard = (data) => {
-        document.getElementById('totalRecordsSec').textContent = data.length;
+        const totalEl = document.getElementById('totalRecordsSec');
+        if (totalEl) totalEl.textContent = data.length;
         const dateCounts = getDateCounts(data);
         const agentCounts = getAgentCounts(data);
         const pointCounts = getPointCounts(data);
@@ -319,20 +343,29 @@ const dashboardModule = (() => {
         setterRef(chart);
     };
 
-    // ================= MAP LOGIC (UNCHANGED) =================
+    // ================= MAP LOGIC (ROBUST) =================
     const updateMap = (data, elementId, type) => {
         if (!L) return;
         const mapElement = document.getElementById(elementId);
         if (!mapElement) return;
 
+        // CRITICAL: If map is hidden, Leaflet.heat will crash on getImageData (width 0)
+        const isHidden = mapElement.offsetWidth === 0 || mapElement.offsetHeight === 0;
+        if (isHidden) {
+            console.log(`📡 Mapa ${type} oculto, se actualizará al cambiar de pestaña.`);
+            return;
+        }
+
         let targetMap = (type === 'facility') ? map : mapSec;
 
         if (!targetMap) {
-            targetMap = L.map(elementId).setView([37.0902, -95.7129], 4);
+            targetMap = L.map(elementId).setView([-12.046374, -77.042793], 12); // Default Lima/Centric instead of US
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
             }).addTo(targetMap);
             if (type === 'facility') map = targetMap; else mapSec = targetMap;
+
+            // Auto resize
             const resizeObserver = new ResizeObserver(() => targetMap.invalidateSize());
             resizeObserver.observe(mapElement);
         }
@@ -389,7 +422,8 @@ const dashboardModule = (() => {
             const bounds = L.latLngBounds(validPoints);
             targetMap.fitBounds(bounds, { padding: [50, 50] });
         }
-        setTimeout(() => targetMap.invalidateSize(), 200);
+
+        targetMap.invalidateSize();
     };
 
     const getDateCounts = (d) => { const c = {}; d.forEach(x => { const dt = x.createdAt?.toDate ? x.createdAt.toDate() : new Date(x.createdAt); if (!isNaN(dt)) c[dt.toLocaleDateString('es-PE')] = (c[dt.toLocaleDateString('es-PE')] || 0) + 1; }); return c; };

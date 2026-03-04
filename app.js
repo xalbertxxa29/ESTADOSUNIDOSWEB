@@ -18,7 +18,7 @@ const appModule = (() => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 console.log('🔄 Cambiando página');
-                
+
                 // Remove active class from all items
                 menuItems.forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
@@ -26,7 +26,7 @@ const appModule = (() => {
                 // Get page name
                 const page = item.getAttribute('data-page');
                 console.log('📄 Página seleccionada:', page);
-                
+
                 const pages = document.querySelectorAll('.page');
 
                 // Hide all pages
@@ -90,7 +90,7 @@ const appModule = (() => {
 
         // Close sidebar on mobile when clicking outside
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.sidebar') && 
+            if (!e.target.closest('.sidebar') &&
                 !e.target.closest('.btn-hamburger') &&
                 !e.target.closest('.btn-hamburger-header') &&
                 window.innerWidth <= 768) {
@@ -107,13 +107,13 @@ const appModule = (() => {
 
     const setupLanguageSelector = () => {
         console.log('🌐 Configurando selector de idioma');
-        
+
         // Selector del login (si existe)
         const languageSelectorLogin = document.getElementById('languageSelectorLogin');
-        
+
         // Selector del header (si existe)
         const languageSelector = document.getElementById('languageSelector');
-        
+
         // Función para sincronizar ambos selectores
         const syncSelectors = (lang) => {
             if (languageSelectorLogin) {
@@ -123,11 +123,11 @@ const appModule = (() => {
                 languageSelector.value = lang;
             }
         };
-        
+
         // Set current language on page load
         const currentLang = i18n.getCurrentLanguage();
         syncSelectors(currentLang);
-        
+
         // Add change event listener al selector del login
         if (languageSelectorLogin) {
             languageSelectorLogin.addEventListener('change', (e) => {
@@ -137,7 +137,7 @@ const appModule = (() => {
                 console.log('✅ Idioma cambiado');
             });
         }
-        
+
         // Add change event listener al selector del header
         if (languageSelector) {
             languageSelector.addEventListener('change', (e) => {
@@ -153,17 +153,3 @@ const appModule = (() => {
         init
     };
 })();
-
-// Initialize app when page is loaded
-console.log('⏳ Esperando a que el DOM esté listo...');
-
-const initializeApp = () => {
-    console.log('📄 DOM cargado, inicializando app...');
-    appModule.init();
-};
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-    initializeApp();
-}
